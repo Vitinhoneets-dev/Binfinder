@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<hmtl lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta http-equiv="X-UA-Compatible" content="IE-edge">
+        <meta name="viewport" content="width=device-width, initial-scale=0.1">
+        <title> webmap</title>
+        <script src="https://polyfill.io/v3/polyfill.min.js?features.default"></script>
+        <style>
+            #map{
+                height: 100%;
+            }
+
+            html, body{
+                height: 100%;
+                margin: 0;
+                padding: 0;
+            }
+
+            .custom.mao.control.button {
+                background-color: #fff;
+                border: 0;
+                border-radius: 2;
+                box-shadow: 0 1px 4px -1px rgba(0, 0, 0, 0.3);
+                margin: 10;
+                padding: 0 0.5em;
+                font: 400 18px Roboto, Arial, sans-serif;
+                overflow: hidden;
+                height: 40;
+                cursor: pointer;
+            }
+
+            .custom.mao.control.button:hover {
+                background-color: rgb(235, 235, 235);
+            }
+        </style>
+    </head>
+    <body>
+        <!-- <div id="map"></div>
+            <script
+            src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBDx3t_ra9h8vn2oMKor55l0bxr0V0NCeM&callback=initMap"
+            defer
+            ></script>
+            <script>
+                let map, infoWindow
+
+                function initMap(){
+                    const map = new google.maps.Map(document.getElementById('map'), {
+                    center: { lat: -19.92, lng: -43.94 },
+                    zoom: 12
+                 });
+                 new google.maps.Marker({ position: { lat: -19.919, lng: -43.938 }, map });
+                }
+            </script> -->
+
+<div id="map" style="height:500px"></div>
+
+<script>
+async function initMap() {
+  const { Map, InfoWindow } = await google.maps.importLibrary("maps");
+  const { AdvancedMarkerElement } = await google.maps.importLibrary("marker");
+
+  const map = new Map(document.getElementById("map"), {
+    center: { lat: -19.92, lng: -43.94 },
+    zoom: 12,
+    mapId: "DEMO_MAP_ID"   // obrigatório para marcadores avançados
+  });
+
+  // 1) Marcador simples
+  const marcador = new AdvancedMarkerElement({
+    map,
+    position: { lat: -19.919, lng: -43.938 },
+    title: "Papelão, 80 kg"
+  });
+
+  // 2) Popup ao clicar no marcador
+  const info = new InfoWindow({
+    content: "<strong>Papelão, 80 kg</strong><br>Padaria Central"
+  });
+  marcador.addListener("click", () => info.open({ anchor: marcador, map }));
+
+  // 3) Marcador com aparência própria (qualquer elemento HTML)
+  const bolinha = document.createElement("div");
+  bolinha.style.cssText =
+    "width:20px;height:20px;border-radius:50%;background:#3b8bff;border:3px solid #fff;box-shadow:0 0 12px #3b8bff";
+  new AdvancedMarkerElement({
+    map,
+    position: { lat: -19.933, lng: -43.951 },
+    content: bolinha
+  });
+
+  // 4) Marcar o local clicando no mapa (útil na tela de publicar)
+  let novo = null;
+  map.addListener("click", (e) => {
+    if (novo) novo.position = e.latLng;
+    else novo = new AdvancedMarkerElement({ map, position: e.latLng });
+    console.log(e.latLng.lat(), e.latLng.lng()); // coordenadas para enviar ao backend
+  });
+}
+</script>
+<script async src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBDx3t_ra9h8vn2oMKor55l0bxr0V0NCeM&callback=initMap&v=weekly&libraries=marker"></script>
+
+
+
+
+
+
+    </body>
+</hmtl>

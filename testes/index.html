@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bindfinder | Descarte consciente</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<style>
+/* ===== Tokens (ajuste o tema aqui) ===== */
+:root{--bg:#070d10;--panel:#0e1a20;--panel2:#13232b;--edge:#22363f;--text:#e8efea;--muted:#8fa3aa;
+--lamp:255,226,170;--r:14px;
+--papel:#3b8bff;--plastico:#ff4d3f;--vidro:#35c46a;--metal:#f5b800;--eletronico:#099b11;--oleo:#a8703c}
+.m-papel{--c:var(--papel)}.m-plastico{--c:var(--plastico)}.m-vidro{--c:var(--vidro)}
+.m-metal{--c:var(--metal)}.m-eletronico{--c:var(--eletronico)}.m-oleo{--c:var(--oleo)}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%}
+body{font:16px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:var(--text);
+background:radial-gradient(900px 520px at 50% -140px,rgba(var(--lamp),.15),transparent 70%),
+radial-gradient(700px 500px at 100% 100%,rgba(59,139,255,.09),transparent 70%),var(--bg);background-attachment:fixed}
+:focus-visible{outline:2px solid rgb(var(--lamp));outline-offset:3px}
+h1,h2,h3{margin:0;letter-spacing:-.02em;line-height:1.1}
+p{margin:0}
+ 
+/* ===== Componentes ===== */
+.panel{position:relative;overflow:hidden;background:linear-gradient(180deg,var(--panel2),var(--panel));
+border:1px solid var(--edge);border-radius:var(--r);box-shadow:0 26px 44px -26px #000,inset 0 1px 0 rgba(255,255,255,.07)}
+.lit::before{content:"";position:absolute;inset:0;pointer-events:none;opacity:0;transition:opacity .3s;
+background:radial-gradient(var(--lr,320px) circle at var(--mx,50%) var(--my,0%),rgba(var(--lamp),.13),transparent 60%)}
+.lit:hover::before{opacity:1}
+button,.btn{font:inherit;font-weight:700;cursor:pointer;border-radius:10px;padding:10px 18px;border:1px solid var(--edge);
+background:var(--panel2);color:var(--text);box-shadow:0 8px 16px -10px #000,inset 0 1px 0 rgba(255,255,255,.08);transition:transform .15s,border-color .15s}
+button:hover{border-color:rgba(var(--lamp),.6);transform:translateY(-1px)}
+button.primary{background:linear-gradient(180deg,#fff0c9,#f3c978);color:#1b1305;border-color:#f3c978;
+box-shadow:0 0 28px -4px rgba(var(--lamp),.55),inset 0 1px 0 #fff}
+button.danger:hover{border-color:#ff6b5e;color:#ff9a90}
+input,select,textarea{font:inherit;width:100%;padding:10px 12px;color:var(--text);background:#0a1318;
+border:1px solid var(--edge);border-radius:10px;box-shadow:inset 0 2px 6px rgba(0,0,0,.5)}
+input:focus,select:focus,textarea:focus{border-color:rgba(var(--lamp),.7)}
+label{display:grid;gap:6px;font-size:.88rem;font-weight:600;color:var(--muted)}
+.chip{padding:6px 13px;font-size:.88rem;border-color:var(--c);box-shadow:none;background:transparent}
+.chip[aria-pressed="true"]{background:var(--c);color:#0a1013;box-shadow:0 0 18px -2px var(--c)}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--c);box-shadow:0 0 10px var(--c);margin-right:8px}
+.badge{font-size:.78rem;padding:2px 10px;border-radius:99px;border:1px solid var(--edge);color:var(--muted)}
+.badge.aberto{color:#7be3a1;border-color:#2c6b46}.badge.coletado{color:var(--muted)}
+ 
+/* ===== Navegação ===== */
+nav{position:sticky;top:0;z-index:900;display:flex;align-items:center;gap:8px;padding:12px 24px;flex-wrap:wrap;
+background:rgba(7,13,16,.75);backdrop-filter:blur(12px);border-bottom:1px solid var(--edge)}
+.logo{font-weight:800;font-size:1.15rem;margin-right:auto;letter-spacing:-.02em}
+.logo b{color:rgb(var(--lamp));text-shadow:0 0 18px rgba(var(--lamp),.8)}
+.tab{background:none;border:0;box-shadow:none;color:var(--muted);padding:8px 12px;border-radius:8px}
+.tab:hover{color:var(--text);transform:none}
+.tab[aria-current="page"]{color:var(--text);background:rgba(var(--lamp),.09);box-shadow:inset 0 -2px 0 rgb(var(--lamp))}
+ 
+/* ===== Páginas ===== */
+.view{display:none;max-width:1180px;margin:0 auto;padding:32px 24px 64px}
+.view.on{display:block}
+.view>h2{font-size:1.8rem;margin-bottom:6px}.sub{color:var(--muted);margin-bottom:24px}
+ 
+.hero{padding:72px 36px;margin-bottom:28px;--lr:560px}
+.hero::after{content:"";position:absolute;left:50%;top:-60%;width:130%;height:120%;transform:translateX(-50%);pointer-events:none;
+background:conic-gradient(from 180deg at 50% 0,transparent 160deg,rgba(var(--lamp),.14) 180deg,transparent 200deg)}
+.hero h1{font-size:clamp(2.4rem,6.2vw,4.7rem);font-weight:800;letter-spacing:-.035em;max-width:14ch;position:relative}
+.hero p{font-size:1.15rem;color:var(--muted);max-width:52ch;margin:18px 0 28px;position:relative}
+.hero .acoes{display:flex;gap:12px;flex-wrap:wrap;position:relative;z-index:1}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);margin-bottom:28px}
+.stats div{padding:20px 24px;border-right:1px solid var(--edge)}.stats div:last-child{border:0}
+.stats strong{display:block;font-size:2rem;text-shadow:0 0 22px rgba(var(--lamp),.35)}.stats span{color:var(--muted);font-size:.9rem}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.passos{padding:24px;display:grid;gap:18px;list-style:none;margin:0;counter-reset:p}
+.passos li{counter-increment:p;padding-left:46px;position:relative}
+.passos li::before{content:counter(p);position:absolute;left:0;top:0;width:32px;height:32px;display:grid;place-items:center;
+border-radius:50%;border:1px solid rgba(var(--lamp),.5);color:rgb(var(--lamp));box-shadow:0 0 14px -3px rgba(var(--lamp),.6)}
+.passos b{display:block}.passos span{color:var(--muted);font-size:.92rem}
+.mats{padding:24px;display:flex;flex-wrap:wrap;gap:10px;align-content:flex-start}.mats h3{width:100%;margin-bottom:6px}
+ 
+.explorar{display:grid;grid-template-columns:minmax(300px,380px) 1fr;gap:20px;height:calc(100vh - 190px);min-height:560px}
+.lateral{display:flex;flex-direction:column;min-height:0}
+.filtros{padding:16px;display:grid;gap:12px;border-bottom:1px solid var(--edge)}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.duo{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+#contagem{padding:10px 16px;font-size:.88rem;color:var(--muted)}
+#lista{list-style:none;margin:0;padding:0;overflow:auto;flex:1}
+.item{display:block;width:100%;text-align:left;font-weight:400;border:0;border-top:1px solid var(--edge);border-radius:0;
+box-shadow:none;background:none;padding:14px 16px;border-left:3px solid var(--c)}
+.item:hover{background:rgba(var(--lamp),.05);transform:none}
+.item strong{display:block}.item span{display:block;font-size:.88rem;color:var(--muted)}
+.vazio{padding:20px 16px;color:var(--muted)}
+.mapbox{min-height:340px}.mapbox>div{height:100%;min-height:340px}
+.leaflet-tile-pane{filter:invert(1) hue-rotate(180deg) brightness(.82) contrast(.92) saturate(.55)}
+.leaflet-container{background:#0a1418;font:inherit}
+.leaflet-popup-content-wrapper,.leaflet-popup-tip{background:var(--panel2);color:var(--text);box-shadow:0 12px 30px #000}
+.leaflet-control-attribution{background:rgba(7,13,16,.7)!important;color:var(--muted)}.leaflet-control-attribution a{color:var(--muted)}
+.pin{display:block;width:20px;height:20px;border-radius:50%;background:var(--c);border:3px solid #0a1013;box-shadow:0 0 0 2px var(--c),0 0 20px 4px var(--c)}
+ 
+.pub{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.pub form{padding:24px;display:grid;gap:14px}
+.pub .mapbox{min-height:420px}
+.erro{color:#ff9a90;font-size:.9rem;min-height:1.3em}
+ 
+.linha{display:grid;grid-template-columns:1fr auto auto;gap:14px;align-items:center;padding:16px 20px;border-top:1px solid var(--edge)}
+.linha:first-child{border:0}.linha small{color:var(--muted);display:block}
+.linha .acs{display:flex;gap:8px}.linha button{padding:6px 12px;font-size:.85rem}
+.texto{padding:28px;display:grid;gap:14px;max-width:70ch}
+details{border-top:1px solid var(--edge);padding:12px 0}summary{cursor:pointer;font-weight:700}details p{color:var(--muted);margin-top:8px}
+footer{text-align:center;color:var(--muted);font-size:.85rem;padding:24px}
+#toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);z-index:2000;padding:10px 20px;border-radius:10px;
+background:var(--panel2);border:1px solid rgba(var(--lamp),.5);box-shadow:0 0 30px -6px rgba(var(--lamp),.5);opacity:0;pointer-events:none;transition:opacity .2s}
+#toast.on{opacity:1}
+ 
+@media(max-width:820px){
+ .cols,.pub,.explorar{grid-template-columns:1fr}.explorar{height:auto}
+ .lateral{max-height:70vh}.mapbox{order:-1}.stats{grid-template-columns:1fr}.stats div{border-right:0;border-bottom:1px solid var(--edge)}
+ .hero{padding:48px 22px}.linha{grid-template-columns:1fr}
+}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+ 
+<nav aria-label="Principal">
+  <div class="logo">Bin<b>Finder</b></div>
+  <button class="tab" data-go="inicio">Início</button>
+  <button class="tab" data-go="explorar">Explorar</button>
+  <button class="tab" data-go="publicar">Publicar</button>
+  <button class="tab" data-go="painel">Meus anúncios</button>
+  <button class="tab" data-go="sobre">Sobre</button>
+</nav>
+ 
+<!-- INÍCIO -->
+<section class="view" id="v-inicio">
+  <div class="panel lit hero">
+    <h1>O que sobra para um, vira recurso para outro.</h1>
+    <p>Publique o resíduo reciclável que você tem. Coletores encontram no mapa, combinam a retirada e dão destino certo ao material.</p>
+    <div class="acoes">
+      <button class="primary" data-go="publicar">Publicar resíduo</button>
+      <button data-go="explorar">Explorar o mapa</button>
+    </div>
+  </div>
+  <div class="panel stats">
+    <div><strong id="sAbertos">0</strong><span>anúncios abertos agora</span></div>
+    <div><strong id="sMateriais">0</strong><span>tipos de material</span></div>
+    <div><strong id="sColetados">0</strong><span>coletas concluídas</span></div>
+  </div>
+  <div class="cols">
+    <ol class="panel lit passos">
+      <li><b>Publique</b><span>Informe o material, a quantidade e marque o local no mapa.</span></li>
+      <li><b>Coletor escolhe</b><span>Quem coleta filtra por tipo e quantidade e vê o que está por perto.</span></li>
+      <li><b>Retirada combinada</b><span>Vocês combinam o horário e o material ganha nova vida.</span></li>
+    </ol>
+    <div class="panel lit mats" id="matsHome"><h3>Materiais aceitos</h3></div>
+  </div>
+</section>
+ 
+<!-- EXPLORAR -->
+<section class="view" id="v-explorar">
+  <h2>Explorar anúncios</h2><p class="sub">Filtre pelo que você coleta e clique em um anúncio para ver no mapa.</p>
+  <div class="explorar">
+    <div class="panel lateral">
+      <div class="filtros">
+        <div class="chips" id="chips"></div>
+        <div class="duo">
+          <label>Quantidade mínima<input type="number" id="fMin" min="0" placeholder="0"></label>
+          <label>Buscar<input type="search" id="fBusca" placeholder="Ex.: papelão"></label>
+        </div>
+      </div>
+      <p id="contagem" aria-live="polite"></p>
+      <ul id="lista"></ul>
+    </div>
+    <div class="panel mapbox"><div id="map"></div></div>
+  </div>
+</section>
+ 
+<!-- PUBLICAR -->
+<section class="view" id="v-publicar">
+  <h2>Publicar resíduo</h2><p class="sub">Preencha os dados e clique no mapa para marcar onde o material está.</p>
+  <div class="pub">
+    <form class="panel" id="form">
+      <label>Material<select id="nMaterial" required></select></label>
+      <div class="duo">
+        <label>Quantidade<input type="number" id="nQtd" min="1" required></label>
+        <label>Unidade<select id="nUn"><option>kg</option><option>unidades</option><option>litros</option><option>sacos</option></select></label>
+      </div>
+      <label>Descrição<textarea id="nDesc" rows="3" placeholder="Estado do material, horário de retirada, acesso" required></textarea></label>
+      <div class="duo">
+        <label>Nome ou empresa<input id="nAutor" required></label>
+        <label>Contato<input id="nContato" placeholder="Telefone ou e-mail" required></label>
+      </div>
+      <div><button type="button" id="btnGps">Usar minha localização</button> <span id="localTxt" class="sub" style="margin:0 0 0 8px">Local não marcado</span></div>
+      <p class="erro" id="erro" role="alert"></p>
+      <button class="primary" type="submit">Publicar anúncio</button>
+    </form>
+    <div class="panel mapbox"><div id="mapPub"></div></div>
+  </div>
+</section>
+ 
+<!-- PAINEL -->
+<section class="view" id="v-painel">
+  <h2>Meus anúncios</h2><p class="sub">Acompanhe o que você publicou e atualize o andamento.</p>
+  <div class="panel" id="meus"></div>
+</section>
+ 
+<!-- SOBRE -->
+<section class="view" id="v-sobre">
+  <h2>Sobre o projeto</h2><p class="sub">Descarte consciente começa em conectar quem tem com quem coleta.</p>
+  <div class="panel lit texto">
+    <p>O objetivo é reduzir o descarte inadequado, facilitar o trabalho de coletores e cooperativas e fortalecer a economia circular.</p>
+    <div>
+      <details><summary>Quem pode publicar?</summary><p>Pessoas e empresas que tenham material reciclável para descartar.</p></details>
+      <details><summary>Quem pode coletar?</summary><p>Catadores, cooperativas e empresas de reciclagem.</p></details>
+      <details><summary>Preciso pagar algo?</summary><p>Defina aqui a regra do seu projeto.</p></details>
+    </div>
+  </div>
+</section>
+ 
+<footer>NomeDoProjeto, descarte consciente</footer>
+<div id="toast" role="status"></div>
+ 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>
+/* ===== Camada de dados: troque pelas chamadas ao backend Java ===== */
+const MATERIAIS={papel:'Papel e papelão',plastico:'Plástico',vidro:'Vidro',metal:'Metal',eletronico:'Eletrônicos',oleo:'Óleo de cozinha'};
+let anuncios=[
+ {id:1,material:'papel',qtd:80,un:'kg',desc:'Caixas de papelão desmontadas, retirada pela manhã.',autor:'Padaria Central',contato:'(31) 90000-0001',lat:-19.919,lng:-43.938,status:'aberto',mine:true},
+ {id:2,material:'plastico',qtd:35,un:'kg',desc:'Garrafas PET limpas, em sacos de 10 kg.',autor:'Condomínio Aurora',contato:'(31) 90000-0002',lat:-19.933,lng:-43.951,status:'aberto'},
+ {id:3,material:'vidro',qtd:120,un:'unidades',desc:'Garrafas de vidro de bar, sem tampa.',autor:'Bar do Zé',contato:'(31) 90000-0003',lat:-19.905,lng:-43.927,status:'aberto'},
+ {id:4,material:'metal',qtd:50,un:'kg',desc:'Latas de alumínio prensadas.',autor:'Escola Municipal Sol',contato:'(31) 90000-0004',lat:-19.941,lng:-43.929,status:'aberto'},
+ {id:5,material:'eletronico',qtd:12,un:'unidades',desc:'Teclados, mouses e carregadores sem uso.',autor:'Escritório Nova Era',contato:'(31) 90000-0005',lat:-19.926,lng:-43.96,status:'coletado',mine:true},
+ {id:6,material:'oleo',qtd:40,un:'litros',desc:'Óleo de fritura em bombonas fechadas.',autor:'Restaurante Sabor',contato:'(31) 90000-0006',lat:-19.912,lng:-43.945,status:'aberto'}
+];
+const API={
+ async listar(){ /* return (await fetch('/api/anuncios')).json(); */ return anuncios },
+ async criar(a){ /* return (await fetch('/api/anuncios',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(a)})).json(); */ return {...a,id:Date.now(),status:'aberto',mine:true} },
+ async status(id,s){ /* await fetch(`/api/anuncios/${id}`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({status:s})}); */ },
+ async remover(id){ /* await fetch(`/api/anuncios/${id}`,{method:'DELETE'}); */ }
+};
+ 
+/* ===== Utilidades ===== */
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const toast=m=>{const t=$('toast');t.textContent=m;t.classList.add('on');setTimeout(()=>t.classList.remove('on'),2400)};
+document.addEventListener('pointermove',e=>{const el=e.target.closest&&e.target.closest('.lit');
+ if(el){const r=el.getBoundingClientRect();el.style.setProperty('--mx',e.clientX-r.left+'px');el.style.setProperty('--my',e.clientY-r.top+'px')}});
+ 
+/* ===== Navegação por abas ===== */
+const VIEWS=['inicio','explorar','publicar','painel','sobre'];let mapa,mapaPub;
+function go(v){
+ if(!VIEWS.includes(v))v='inicio';
+ VIEWS.forEach(n=>$('v-'+n).classList.toggle('on',n===v));
+ document.querySelectorAll('.tab').forEach(b=>{b.dataset.go===v?b.setAttribute('aria-current','page'):b.removeAttribute('aria-current')});
+ if(v==='explorar'){iniciaMapa();setTimeout(()=>{mapa.invalidateSize();renderExplorar(true)},50)}
+ if(v==='publicar'){iniciaMapaPub();setTimeout(()=>mapaPub.invalidateSize(),50)}
+ location.hash=v;scrollTo(0,0);
+}
+document.addEventListener('click',e=>{const b=e.target.closest('[data-go]');if(b)go(b.dataset.go)});
+addEventListener('hashchange',()=>go(location.hash.slice(1)));
+ 
+/* ===== Mapas ===== */
+const tiles=()=>L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'&copy; OpenStreetMap'});
+const icone=m=>L.divIcon({className:'',html:`<span class="pin m-${m}"></span>`,iconSize:[20,20],iconAnchor:[10,10],popupAnchor:[0,-12]});
+let camada,marcadores={};
+function iniciaMapa(){if(mapa)return;mapa=L.map('map').setView([-19.92,-43.94],12);tiles().addTo(mapa);camada=L.layerGroup().addTo(mapa)}
+let coord=null,pinNovo=null;
+function marca(latlng){coord=latlng;if(pinNovo)mapaPub.removeLayer(pinNovo);pinNovo=L.marker(latlng).addTo(mapaPub);
+ $('localTxt').textContent=`Local marcado (${latlng.lat.toFixed(4)}, ${latlng.lng.toFixed(4)})`}
+function iniciaMapaPub(){if(mapaPub)return;mapaPub=L.map('mapPub').setView([-19.92,-43.94],12);tiles().addTo(mapaPub);mapaPub.on('click',e=>marca(e.latlng))}
+$('btnGps').onclick=()=>{
+ if(!navigator.geolocation){$('erro').textContent='Seu navegador não oferece localização. Marque o local no mapa.';return}
+ navigator.geolocation.getCurrentPosition(p=>{const l={lat:p.coords.latitude,lng:p.coords.longitude};marca(l);mapaPub.setView(l,15)},
+ ()=>{$('erro').textContent='Não foi possível obter a localização. Marque o local no mapa.'})};
+ 
+/* ===== Explorar ===== */
+const filtro={mats:new Set(),min:0,q:''};
+function montaFiltros(){
+ Object.entries(MATERIAIS).forEach(([k,v])=>{
+  const b=document.createElement('button');b.type='button';b.className=`chip m-${k}`;b.textContent=v;b.setAttribute('aria-pressed','false');
+  b.onclick=()=>{filtro.mats.has(k)?filtro.mats.delete(k):filtro.mats.add(k);b.setAttribute('aria-pressed',filtro.mats.has(k));renderExplorar()};
+  $('chips').appendChild(b);$('nMaterial').add(new Option(v,k));
+  $('matsHome').insertAdjacentHTML('beforeend',`<span class="chip m-${k}" style="border:1px solid var(--c);border-radius:10px"><i class="dot" style="margin-right:6px"></i>${v}</span>`);
+ });
+ $('fMin').oninput=e=>{filtro.min=+e.target.value||0;renderExplorar()};
+ $('fBusca').oninput=e=>{filtro.q=e.target.value.trim().toLowerCase();renderExplorar()};
+}
+function renderExplorar(ajusta){
+ if(!mapa)return;
+ const lista=anuncios.filter(a=>a.status==='aberto'&&(!filtro.mats.size||filtro.mats.has(a.material))&&a.qtd>=filtro.min&&
+  (!filtro.q||`${a.desc} ${a.autor} ${MATERIAIS[a.material]}`.toLowerCase().includes(filtro.q)));
+ camada.clearLayers();const ul=$('lista');ul.innerHTML='';
+ lista.forEach(a=>{
+  const mk=L.marker([a.lat,a.lng],{icon:icone(a.material),title:MATERIAIS[a.material]})
+   .bindPopup(`<strong>${esc(MATERIAIS[a.material])}, ${a.qtd} ${esc(a.un)}</strong><br>${esc(a.desc)}<br><em>${esc(a.autor)}</em><br>Contato: ${esc(a.contato)}`);
+  camada.addLayer(mk);
+  const li=document.createElement('li');
+  li.innerHTML=`<button type="button" class="item m-${a.material}"><strong>${esc(MATERIAIS[a.material])}, ${a.qtd} ${esc(a.un)}</strong><span>${esc(a.desc)}</span><span>${esc(a.autor)}</span></button>`;
+  li.firstChild.onclick=()=>{mapa.flyTo([a.lat,a.lng],15);mk.openPopup()};ul.appendChild(li);
+ });
+ $('contagem').textContent=lista.length===1?'1 anúncio encontrado':`${lista.length} anúncios encontrados`;
+ if(!lista.length)ul.innerHTML='<li class="vazio">Nenhum anúncio com esses filtros. Remova um filtro para ver mais resultados.</li>';
+ if(ajusta&&lista.length)mapa.fitBounds(lista.map(a=>[a.lat,a.lng]),{padding:[40,40]});
+}
+ 
+/* ===== Publicar ===== */
+$('form').onsubmit=async e=>{
+ e.preventDefault();
+ if(!coord){$('erro').textContent='Marque o local no mapa para publicar.';return}
+ $('erro').textContent='';
+ const novo=await API.criar({material:$('nMaterial').value,qtd:+$('nQtd').value,un:$('nUn').value,desc:$('nDesc').value.trim(),
+  autor:$('nAutor').value.trim(),contato:$('nContato').value.trim(),lat:coord.lat,lng:coord.lng});
+ anuncios.push(novo);coord=null;if(pinNovo){mapaPub.removeLayer(pinNovo);pinNovo=null}
+ $('localTxt').textContent='Local não marcado';$('form').reset();atualiza();toast('Anúncio publicado');go('painel');
+};
+ 
+/* ===== Painel e estatísticas ===== */
+function renderPainel(){
+ const meus=anuncios.filter(a=>a.mine),box=$('meus');
+ if(!meus.length){box.innerHTML='<p class="vazio">Você ainda não publicou nada. Use a aba Publicar para criar seu primeiro anúncio.</p>';return}
+ box.innerHTML=meus.map(a=>`<div class="linha m-${a.material}"><div><i class="dot"></i><b>${esc(MATERIAIS[a.material])}, ${a.qtd} ${esc(a.un)}</b>
+  <small>${esc(a.desc)}</small></div><span class="badge ${a.status}">${a.status==='aberto'?'Aberto':'Coletado'}</span>
+  <div class="acs">${a.status==='aberto'?`<button data-ac="ok" data-id="${a.id}">Marcar como coletado</button>`:''}
+  <button class="danger" data-ac="del" data-id="${a.id}">Excluir</button></div></div>`).join('');
+}
+$('meus').onclick=async e=>{
+ const b=e.target.closest('[data-ac]');if(!b)return;const id=+b.dataset.id;
+ if(b.dataset.ac==='ok'){await API.status(id,'coletado');anuncios.find(a=>a.id===id).status='coletado';toast('Anúncio atualizado')}
+ else{await API.remover(id);anuncios=anuncios.filter(a=>a.id!==id);toast('Anúncio excluído')}
+ atualiza();
+};
+function atualiza(){
+ $('sAbertos').textContent=anuncios.filter(a=>a.status==='aberto').length;
+ $('sMateriais').textContent=new Set(anuncios.map(a=>a.material)).size;
+ $('sColetados').textContent=anuncios.filter(a=>a.status==='coletado').length;
+ renderPainel();renderExplorar();
+}
+ 
+/* ===== Início ===== */
+(async()=>{montaFiltros();anuncios=await API.listar();atualiza();go(location.hash.slice(1))})();
+</script>
+</body>
+</html>
+ 

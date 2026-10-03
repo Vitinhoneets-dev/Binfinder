@@ -1,0 +1,27 @@
+[{
+    "time": "Galo",
+
+    //objeto json
+    "estadio":{
+        //atributos do objeto
+        "nome": "arena mrv",
+        "publico_recorde": 13.000,
+        "capacidade": null
+    },
+    //array no json
+    "jogadores":[{
+        "nome": "Everson",
+        "idade": 37,
+        "titular": true,
+        "time":["atletico Mg", "america", "psg"]
+    },
+    {
+        "nome": "Everson",
+        "idade": 37,
+        "titular": true,
+        "time":["atletico Mg", "america", "psg"]
+    }]
+
+
+
+}]
